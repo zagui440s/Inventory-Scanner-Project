@@ -2,3 +2,4 @@ user_id,username,first_name,last_name,password_hash,role,building
 SA001,superadmin,Super,Admin,$2b$12$4lBtQp87Cgr9Y56MTffDge33ExypJmQqquJ07FItxbw6jLh/0mrqe,superadmin,1
 dafffb2a,jaguilar,jesus,aguilar,$2b$12$jYOzZ0otUEByYPaiCjSL9u/rbJi/.BcWJq2fbuzmgcN0L7ZxpyGM6,worker,3
 56ecdc5b,guermo,guermo,chump,$2b$12$gAOZpJQNuGQOB6TWSF0HkegGu0eEIUKsUmeg5Qk8mcZGwidW2TTwK,worker,3
+739f6f63,cfish,cody,fish,$2b$12$yFyPZ6VpgMGqHfXK3cdjEetbBvcNBbnnTvuICQn3i/iG4rDkuDCJG,admin,3
