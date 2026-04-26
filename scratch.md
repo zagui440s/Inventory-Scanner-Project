@@ -1,0 +1,3 @@
+-superadmin option 4. view session audit log doesnt work.
+-adding categories doesnt seem to work
+-when scanning, it should not take less than what 8-12 characters, no error scans?

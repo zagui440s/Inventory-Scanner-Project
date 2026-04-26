@@ -1,0 +1,21 @@
+building,data_hall,hall_code,status,created_by,created_at
+1,Alpha,A,active,system,2026-04-25 00:00:00
+1,Bravo,B,active,system,2026-04-25 00:00:00
+1,Charlie,C,active,system,2026-04-25 00:00:00
+1,Delta,D,active,system,2026-04-25 00:00:00
+1,Echo,DOCK,active,system,2026-04-25 00:00:00
+2,Alpha,A,active,system,2026-04-25 00:00:00
+2,Bravo,B,active,system,2026-04-25 00:00:00
+2,Charlie,C,active,system,2026-04-25 00:00:00
+2,Delta,D,active,system,2026-04-25 00:00:00
+2,Echo,DOCK,active,system,2026-04-25 00:00:00
+3,Alpha,A,active,system,2026-04-25 00:00:00
+3,Bravo,B,active,system,2026-04-25 00:00:00
+3,Charlie,C,active,system,2026-04-25 00:00:00
+3,Delta,D,active,system,2026-04-25 00:00:00
+3,Echo,DOCK,active,system,2026-04-25 00:00:00
+4,Alpha,A,active,system,2026-04-25 00:00:00
+4,Bravo,B,active,system,2026-04-25 00:00:00
+4,Charlie,C,active,system,2026-04-25 00:00:00
+4,Delta,D,active,system,2026-04-25 00:00:00
+4,Echo,DOCK,active,system,2026-04-25 00:00:00

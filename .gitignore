@@ -1,0 +1,9 @@
+# .gitignore
+.env
+credentials.json
+token.json
+__pycache__/
+*.pyc
+data/scan_log.csv
+data/items.csv
+venv/
