@@ -18,12 +18,14 @@ FLAGGED_FILE = os.path.join(DATA_DIR, "flagged_scans.csv")
 OFFLINE_QUEUE_FILE = os.path.join(DATA_DIR, "offline_queue.csv")
 LOCATIONS_FILE = os.path.join(DATA_DIR, "locations.csv")
 TRANSFERS_FILE = os.path.join(DATA_DIR, "transfers.csv")
+OUT_REASONS_FILE = os.path.join(DATA_DIR, "out_reasons.csv")
 
 BUILDINGS = ["1", "2", "3", "4"]
 
 INACTIVITY_WARNING = 25 * 60
 INACTIVITY_TIMEOUT = 30 * 60
 DUPLICATE_WINDOW = 4
+MIN_SERIAL_LENGTH = 8
 
 LOCK_ENABLED = True
 

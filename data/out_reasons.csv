@@ -1,0 +1,4 @@
+reason_id,reason,status,created_by,created_at
+1,Shipping out for repair,active,system,2026-04-25 00:00:00
+2,Permanently removed,active,system,2026-04-25 00:00:00
+3,Other,active,system,2026-04-25 00:00:00

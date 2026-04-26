@@ -7,7 +7,7 @@ from config.settings import (
     SCAN_LOG, ITEMS_FILE, ROOM_FILE, MASTER_FILE,
     SNAPSHOTS_DIR, BUILDINGS, CATEGORIES_FILE,
     FLAGGED_FILE, OFFLINE_QUEUE_FILE, LOCATIONS_FILE,
-    TRANSFERS_FILE, DOCK_HALL
+    TRANSFERS_FILE, DOCK_HALL, OUT_REASONS_FILE
 )
 from utils.helpers import get_active_categories, get_all_active_rooms
 
@@ -175,7 +175,7 @@ def review_flagged_scans(session):
                 writer.writerow([
                     scan["flagged_at"], scan["item_id"], scan["category"],
                     scan["action"], scan["qty"], scan["room"],
-                    scan.get("sub_room", ""), scan["username"], ""
+                    scan.get("sub_room", ""), scan["username"], "", scan.get("reason", "")
                 ])
             scan["status"] = "approved"
             scan["reviewed_by"] = session["username"]
@@ -231,7 +231,8 @@ def review_offline_queue(session):
                 writer.writerow([
                     scan["queued_at"], scan["item_id"], scan["category"],
                     scan["action"], scan["qty"], scan["room"],
-                    scan.get("sub_room", ""), scan["username"], ""
+                    scan.get("sub_room", ""), scan["username"], "",
+                    scan.get("reason", "")
                 ])
                 scan["status"] = "approved"
                 scan["reviewed_by"] = session["username"]
@@ -248,7 +249,8 @@ def review_offline_queue(session):
                     writer.writerow([
                         scan["queued_at"], scan["item_id"], scan["category"],
                         scan["action"], scan["qty"], scan["room"],
-                        scan.get("sub_room", ""), scan["username"], ""
+                        scan.get("sub_room", ""), scan["username"], "",
+                        scan.get("reason", "")
                     ])
                 scan["status"] = "approved"
                 scan["reviewed_by"] = session["username"]
@@ -270,7 +272,8 @@ def review_offline_queue(session):
     with open(OFFLINE_QUEUE_FILE, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=[
             "queued_at", "item_id", "category", "action",
-            "qty", "room", "sub_room", "username", "status", "reviewed_by", "reviewed_at"
+            "qty", "room", "sub_room", "username",
+            "reason", "status", "reviewed_by", "reviewed_at"
         ])
         writer.writeheader()
         writer.writerows(queue)
@@ -453,6 +456,82 @@ def manage_categories(session):
                 writer.writeheader()
                 writer.writerows(updated)
             print(f"  Category '{name}' activated.")
+
+        elif choice == "4":
+            break
+
+
+def manage_out_reasons(session):
+    while True:
+        print("\n--- OUT REASON MANAGEMENT ---")
+        reasons = []
+        with open(OUT_REASONS_FILE, "r") as f:
+            reader = csv.DictReader(f)
+            reasons = list(reader)
+
+        print(f"\n  {'#':<5} {'REASON':<35} {'STATUS':<12} {'CREATED BY':<20} {'CREATED AT'}")
+        print(f"  {'-'*85}")
+        for i, r in enumerate(reasons, 1):
+            print(f"  {i:<5} {r['reason']:<35} {r['status']:<12} {r['created_by']:<20} {r['created_at']}")
+
+        print("\n  1. Add new reason")
+        print("  2. Deactivate reason")
+        print("  3. Activate reason")
+        print("  4. Back")
+
+        choice = input("\nChoice: ").strip()
+
+        if choice == "1":
+            name = input("  New reason: ").strip()
+            if not name:
+                print("  Invalid reason.")
+                continue
+            existing = [r["reason"].lower() for r in reasons]
+            if name.lower() in existing:
+                print("  Reason already exists.")
+                continue
+            reason_id = str(len(reasons) + 1)
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with open(OUT_REASONS_FILE, "a", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow([reason_id, name, "active", session["username"], timestamp])
+            print(f"  Reason '{name}' added and active immediately.")
+
+        elif choice == "2":
+            name = input("  Reason to deactivate: ").strip().lower()
+            updated = []
+            found = False
+            for r in reasons:
+                if r["reason"].lower() == name:
+                    r["status"] = "inactive"
+                    found = True
+                updated.append(r)
+            if not found:
+                print("  Reason not found.")
+                continue
+            with open(OUT_REASONS_FILE, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=["reason_id", "reason", "status", "created_by", "created_at"])
+                writer.writeheader()
+                writer.writerows(updated)
+            print(f"  Reason deactivated. Historical data preserved.")
+
+        elif choice == "3":
+            name = input("  Reason to activate: ").strip().lower()
+            updated = []
+            found = False
+            for r in reasons:
+                if r["reason"].lower() == name:
+                    r["status"] = "active"
+                    found = True
+                updated.append(r)
+            if not found:
+                print("  Reason not found.")
+                continue
+            with open(OUT_REASONS_FILE, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=["reason_id", "reason", "status", "created_by", "created_at"])
+                writer.writeheader()
+                writer.writerows(updated)
+            print(f"  Reason activated.")
 
         elif choice == "4":
             break

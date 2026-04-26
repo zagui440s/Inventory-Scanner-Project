@@ -6,9 +6,9 @@ from datetime import datetime
 from config.settings import (
     SCAN_LOG, INACTIVITY_WARNING, INACTIVITY_TIMEOUT,
     DUPLICATE_WINDOW, LOCK_ENABLED, OFFLINE_QUEUE_FILE,
-    DOCK_HALL, FIXED_SUBROOMS
+    DOCK_HALL, FIXED_SUBROOMS, MIN_SERIAL_LENGTH
 )
-from utils.helpers import get_active_categories, get_active_locations
+from utils.helpers import get_active_categories, get_active_locations, get_active_reasons
 from core.inventory import (
     register_item, calculate_stock, get_room_stock,
     print_inventory, flag_scan, is_item_active,
@@ -89,6 +89,19 @@ def select_category():
         return "MIXED"
 
 
+def select_out_reason():
+    reasons = get_active_reasons()
+    print("\n  Reason for removal:")
+    for i, reason in enumerate(reasons, 1):
+        print(f"  {i}. {reason}")
+    choice = input("  Choice: ").strip()
+    try:
+        return reasons[int(choice) - 1]
+    except:
+        print("  Invalid choice, logging as Other.")
+        return "Other"
+
+
 def run_scanner(session):
     print(f"\n--- SELECT DATA HALL ---")
     data_hall, hall_code = select_data_hall(session["building"])
@@ -149,9 +162,9 @@ def run_scanner(session):
         dock_label = " | DOCK MODE" if is_dock else ""
         print(f"\n--- INVENTORY SCAN --- [{session['first_name']} | Bldg {session['building']} | {data_hall}{sub_label}{dock_label} | {mode_label}]")
         print(f"  Category: {session_category}")
-        print(f"  Commands: ROOM, SUBROOM, CATEGORY, LOCK, OFFLINE, ONLINE, EXIT")
+        print(f"  Commands: ROOM, SUBROOM, CATEGORY, OUT, LOCK, OFFLINE, ONLINE, EXIT")
         if is_dock:
-            print(f"  Dock mode — items will be logged as IN_TRANSIT only")
+            print(f"  Dock mode — scan items to log as IN_TRANSIT")
 
         item = input("\nScan Item: ").strip()
 
@@ -210,6 +223,51 @@ def run_scanner(session):
             reset_timer()
             continue
 
+        # OUT command — next scan will be treated as OUT
+        if item.upper() == "OUT":
+            print(f"\n  OUT mode — scan the item to remove from inventory")
+            out_item = input("Scan Item to remove: ").strip()
+
+            if len(out_item) < MIN_SERIAL_LENGTH:
+                print(f"  Invalid scan. Serial must be at least {MIN_SERIAL_LENGTH} characters.")
+                reset_timer()
+                continue
+
+            out_reason = select_out_reason()
+            room = f"{session['building']}-{data_hall}"
+            current = get_room_stock(out_item, room)
+
+            if current <= 0:
+                print(f"  Item not found in {room}. Cannot remove.")
+                reset_timer()
+                continue
+
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            if offline_mode[0]:
+                with open(OFFLINE_QUEUE_FILE, "a", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow([timestamp, out_item, session_category, "OUT", 1, room, sub_room, session["username"], out_reason, "pending", "", ""])
+                print(f"  Queued (offline): OUT {out_item} from {room} | Reason: {out_reason}")
+            else:
+                with open(SCAN_LOG, "a", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow([timestamp, out_item, session_category, "OUT", 1, room, sub_room, session["username"], "", out_reason])
+                session["last_scan_time"] = timestamp
+                session["total_scans"] += 1
+                calculate_stock()
+                print_inventory()
+                print(f"\n  Logged OUT {out_item} from {room} | Reason: {out_reason}")
+
+            reset_timer()
+            continue
+
+        # serial length validation
+        if len(item) < MIN_SERIAL_LENGTH:
+            print(f"  Invalid scan. Serial must be at least {MIN_SERIAL_LENGTH} characters.")
+            reset_timer()
+            continue
+
         # 4 second duplicate check
         now = time.time()
         if item in last_scanned:
@@ -238,7 +296,7 @@ def run_scanner(session):
         room = f"{session['building']}-{data_hall}"
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # ---- DOCK MODE — no IN/OUT prompt, no scan_log write ----
+        # ---- DOCK MODE ----
         if is_dock:
             register_item(item, item_category)
             transfer_id = log_transfer(
@@ -248,7 +306,7 @@ def run_scanner(session):
             if offline_mode[0]:
                 with open(OFFLINE_QUEUE_FILE, "a", newline="") as f:
                     writer = csv.writer(f)
-                    writer.writerow([timestamp, item, item_category, "TRANSIT", 1, room, sub_room, session["username"], "pending", "", ""])
+                    writer.writerow([timestamp, item, item_category, "TRANSIT", 1, room, sub_room, session["username"], "", "pending", "", ""])
                 print(f"  Queued (offline): TRANSIT {item} ({item_category}) → {sub_room if sub_room else 'UNKNOWN'}")
             else:
                 session["last_scan_time"] = timestamp
@@ -257,24 +315,14 @@ def run_scanner(session):
             reset_timer()
             continue
 
-        # ---- ROOM MODE — normal IN/OUT flow ----
-        action = input("IN / OUT: ").strip().upper()
-        if action not in ["IN", "OUT"]:
-            print("  Invalid action.")
-            reset_timer()
-            continue
-
-        qty = 1
-
-        # duplicate serial check only for IN scans in room mode
-        if action == "IN" and is_item_active(item):
-            # check if its an incoming transfer first
+        # ---- ROOM MODE — default IN ----
+        if is_item_active(item):
             confirmed, transfer_id = confirm_transfer(item, room, session["username"])
             if confirmed:
                 print(f"  Transfer confirmed. Item received at {room} {sub_room}")
                 with open(SCAN_LOG, "a", newline="") as f:
                     writer = csv.writer(f)
-                    writer.writerow([timestamp, item, item_category, "IN", qty, room, sub_room, session["username"], transfer_id])
+                    writer.writerow([timestamp, item, item_category, "IN", 1, room, sub_room, session["username"], transfer_id, ""])
                 session["last_scan_time"] = timestamp
                 session["total_scans"] += 1
                 calculate_stock()
@@ -283,39 +331,29 @@ def run_scanner(session):
                 reset_timer()
                 continue
             else:
-                flag_scan(item, item_category, action, qty, room, sub_room, session["username"], "DUPLICATE_SERIAL")
+                flag_scan(item, item_category, "IN", 1, room, sub_room, session["username"], "DUPLICATE_SERIAL")
                 reset_timer()
                 continue
 
         register_item(item, item_category)
-
-        if action == "OUT":
-            current = get_room_stock(item, room)
-            if qty > current:
-                print(f"  Not enough stock in {room}. Current: {current}")
-                reset_timer()
-                continue
-
-        transfer_id = ""
-        if action == "IN":
-            confirmed, transfer_id = confirm_transfer(item, room, session["username"])
-            if confirmed:
-                print(f"  Transfer confirmed. Item received at {room} {sub_room}")
-            transfer_id = transfer_id or ""
+        confirmed, transfer_id = confirm_transfer(item, room, session["username"])
+        if confirmed:
+            print(f"  Transfer confirmed. Item received at {room} {sub_room}")
+        transfer_id = transfer_id or ""
 
         if offline_mode[0]:
             with open(OFFLINE_QUEUE_FILE, "a", newline="") as f:
                 writer = csv.writer(f)
-                writer.writerow([timestamp, item, item_category, action, qty, room, sub_room, session["username"], "pending", "", ""])
-            print(f"  Queued (offline): {action} {item} ({item_category}) in {room} {sub_room}")
+                writer.writerow([timestamp, item, item_category, "IN", 1, room, sub_room, session["username"], "", "pending", "", ""])
+            print(f"  Queued (offline): IN {item} ({item_category}) in {room} {sub_room}")
         else:
             with open(SCAN_LOG, "a", newline="") as f:
                 writer = csv.writer(f)
-                writer.writerow([timestamp, item, item_category, action, qty, room, sub_room, session["username"], transfer_id])
+                writer.writerow([timestamp, item, item_category, "IN", 1, room, sub_room, session["username"], transfer_id, ""])
             session["last_scan_time"] = timestamp
             session["total_scans"] += 1
             calculate_stock()
             print_inventory()
-            print(f"\n  Logged {action} {item} ({item_category}) | {room} {sub_room}")
+            print(f"\n  Logged IN {item} ({item_category}) | {room} {sub_room}")
 
         reset_timer()

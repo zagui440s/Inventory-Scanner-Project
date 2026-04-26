@@ -5,7 +5,7 @@ from config.settings import (
     SCAN_LOG, ITEMS_FILE, ROOM_FILE, MASTER_FILE,
     USERS_FILE, SESSIONS_FILE, CATEGORIES_FILE,
     FLAGGED_FILE, OFFLINE_QUEUE_FILE, SNAPSHOTS_DIR,
-    LOCATIONS_FILE, TRANSFERS_FILE
+    LOCATIONS_FILE, TRANSFERS_FILE, OUT_REASONS_FILE
 )
 
 
@@ -15,7 +15,11 @@ def init_files():
     if not os.path.exists(SCAN_LOG):
         with open(SCAN_LOG, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["time", "item_id", "category", "action", "qty", "room", "sub_room", "username", "transfer_id"])
+            writer.writerow([
+                "time", "item_id", "category", "action",
+                "qty", "room", "sub_room", "username",
+                "transfer_id", "reason"
+            ])
 
     if not os.path.exists(ITEMS_FILE):
         with open(ITEMS_FILE, "w", newline="") as f:
@@ -53,7 +57,11 @@ def init_files():
     if not os.path.exists(OFFLINE_QUEUE_FILE):
         with open(OFFLINE_QUEUE_FILE, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["queued_at", "item_id", "category", "action", "qty", "room", "sub_room", "username", "status", "reviewed_by", "reviewed_at"])
+            writer.writerow([
+                "queued_at", "item_id", "category", "action",
+                "qty", "room", "sub_room", "username",
+                "reason", "status", "reviewed_by", "reviewed_at"
+            ])
 
     if not os.path.exists(LOCATIONS_FILE):
         with open(LOCATIONS_FILE, "w", newline="") as f:
@@ -68,6 +76,11 @@ def init_files():
                 "building", "from_location", "destination", "sub_room",
                 "username", "status", "confirmed_at", "confirmed_by"
             ])
+
+    if not os.path.exists(OUT_REASONS_FILE):
+        with open(OUT_REASONS_FILE, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["reason_id", "reason", "status", "created_by", "created_at"])
 
 
 def get_active_categories():
@@ -100,3 +113,13 @@ def get_all_active_rooms():
                 if room_name not in rooms:
                     rooms.append(room_name)
     return rooms
+
+
+def get_active_reasons():
+    reasons = []
+    with open(OUT_REASONS_FILE, "r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row["status"].lower() == "active":
+                reasons.append(row["reason"])
+    return reasons
