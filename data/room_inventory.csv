@@ -7,12 +7,16 @@ room,item_id,stock
 2-Bravo,NO ITEMS,0
 2-Charlie,NO ITEMS,0
 2-Delta,NO ITEMS,0
-3-Alpha,1234567899,0
-3-Alpha,9999999999,0
+3-Alpha,NO ITEMS,0
 3-Bravo,NO ITEMS,0
 3-Charlie,NO ITEMS,0
 3-Delta,NO ITEMS,0
-4-Alpha,NO ITEMS,0
+4-Alpha,123456789,1
+4-Alpha,987654321,1
+4-Alpha,111222333,0
 4-Bravo,NO ITEMS,0
-4-Charlie,NO ITEMS,0
+4-Charlie,2527XNG29X,0
+4-Charlie,2543XNG0LR,1
+4-Charlie,2527XNG18N,1
+4-Charlie,1A72FDW00-36L-GA01,1
 4-Delta,NO ITEMS,0
